@@ -33,10 +33,19 @@
     <ClCompile Include="imgui\imgui_widgets.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\backends\imgui_impl_dx11.cpp">
+    <ClCompile Include="imgui\backends\imgui_impl_win32.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\backends\imgui_impl_win32.cpp">
+    <ClCompile Include="imgui\backends\imgui_impl_opengl3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="OBJReader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -59,11 +68,26 @@
     <ClInclude Include="imgui\imstb_truetype.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="imgui\backends\imgui_impl_dx11.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="imgui\backends\imgui_impl_win32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="imgui\backends\imgui_impl_opengl3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="OBJReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="shader.hlsl" />
   </ItemGroup>
 </Project>
