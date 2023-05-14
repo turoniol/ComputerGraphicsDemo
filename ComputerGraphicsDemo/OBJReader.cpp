@@ -1,6 +1,5 @@
 #include "OBJReader.h"
 
-#include "Mesh.h"
 #include "Logger.h"
 
 #include <sstream>
@@ -8,21 +7,28 @@
 #include <map>
 #include <algorithm>
 #include <ranges>
+#include <filesystem>
 
-Mesh OBJReader::Read(const std::string& filepath) {
-    Clear();
+OBJReader::OBJReader()
+{
+    ParsePair("v", ParseVertex);
+    ParsePair("vt", ParseTexCoord);
+    ParsePair("vn", ParseNormal);
+    ParsePair("f", ParseFace);
+    ParsePair("o", ParseObject);
+    ParsePair("mtllib", ParseMtllib);
+    ParsePair("usemtl", ParseUsemtl);
+    IgnorePair("#");
 
-    std::ifstream str(filepath);
-
-    std::string line;
-    while (std::getline(str, line)) {
-        ParseLine(line);
-    }
-
-    return BuildMesh();
+    endFunc = [this] { BuildMesh(); };
 }
 
-Mesh OBJReader::BuildMesh() const {
+const std::map<std::string, Mesh>& OBJReader::GetMeshes() const
+{
+    return m_objects;
+}
+
+void OBJReader::BuildMesh() {
     auto adjustIndex = [this](std::size_t index) {
         if (index < 0)
             index = m_vertices.size() - index;
@@ -43,12 +49,14 @@ Mesh OBJReader::BuildMesh() const {
         }
 
         triangle.normal = m_normals[adjustIndex(face.data[0].vn())];
-        triangle.color = { 1, 1, 0, 1 };
 
         mesh.AddPolygon(std::move(triangle));
     }
 
-    return mesh;
+    mesh.material = m_materials[m_material];
+    m_objects.insert({ m_name, std::move(mesh) });
+
+    Clear();
 }
 
 void OBJReader::ParseVertex(std::stringstream& str) {
@@ -87,31 +95,69 @@ void OBJReader::ParseFace(std::stringstream& str) {
     m_faces.emplace_back(std::move(face));
 }
 
-void OBJReader::ParseLine(const std::string& str) {
-    static std::map<std::string, ParseFunc> nameToAction{
-        ParsePair("v", ParseVertex),
-        ParsePair("vt", ParseTexCoord),
-        ParsePair("vn", ParseNormal),
-        ParsePair("f", ParseFace),
-        IgnorePair("#")
+void OBJReader::ParseObject(std::stringstream& str)
+{
+    str >> m_name;
+
+    if (!m_objects.empty())
+        BuildMesh();
+}
+
+void OBJReader::ParseMtllib(std::stringstream& str)
+{
+    ReaderBase mtlReader;
+
+    Mesh::Material mat{};
+    std::string matName{};
+    auto newmtl = [&](std::stringstream& sstr) {
+        if (!m_materials.empty()) {
+            m_materials.insert({ matName, mat });
+            matName = {};
+            mat = {};
+        }
+
+        sstr >> matName;
+    };
+    auto Ka = [&](std::stringstream& sstr) {
+        auto v = ReadVec<float, 3>(sstr);
+        mat.ambient = DirectX::XMVectorSet(v.data[0], v.data[1], v.data[2], 1.0f);
+    };
+    auto Kd = [&](std::stringstream& sstr) {
+        auto v = ReadVec<float, 3>(sstr);
+        mat.diffuse = DirectX::XMVectorSet(v.data[0], v.data[1], v.data[2], 1.0f);
+    };
+    auto Ks = [&](std::stringstream& sstr) {
+        auto v = ReadVec<float, 3>(sstr);
+        mat.specular = DirectX::XMVectorSet(v.data[0], v.data[1], v.data[2], 1.0f);
+
+    };
+    auto Ns = [&](std::stringstream& sstr) {
+        sstr >> mat.shininess;
     };
 
-    std::string prefix;
-    std::stringstream sstr(str);
-    sstr >> prefix;
+    mtlReader.m_actions.insert({ "newmtl", newmtl });
+    mtlReader.m_actions.insert({ "Ka", Ka });
+    mtlReader.m_actions.insert({ "Kd", Kd });
+    mtlReader.m_actions.insert({ "Ks", Ks });
+    mtlReader.m_actions.insert({ "Ns", Ns });
 
-    if (prefix.empty())
-        return;
+    mtlReader.endFunc = [&]() {
+        m_materials.insert({ matName, mat });
+    };
 
-    auto finded = nameToAction.find(prefix);
+    std::string path{};
+    str >> path;
+    mtlReader.Read(std::filesystem::path(workingDir).append(path).string());
+}
 
-    if (finded == nameToAction.end())
-        LOGERRRET("No such option: ", prefix);
-
-    finded->second(sstr);
+void OBJReader::ParseUsemtl(std::stringstream& str)
+{
+    str >> m_material;
 }
 
 void OBJReader::Clear() {
+    m_material.clear();
+    m_name.clear();
     m_vertices.clear();
     m_normals.clear();
     m_texcoords.clear();

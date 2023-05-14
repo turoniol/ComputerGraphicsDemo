@@ -72,8 +72,7 @@ int main(int, char**)
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;    // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
     ImGui::StyleColorsDark();
 
@@ -88,7 +87,10 @@ int main(int, char**)
     renderer.viewport = &viewport;
 
     OBJReader reader;
-    auto mesh = reader.Read("C:\\Users\\turon\\Downloads\\fdx54mtvuz28-FinalBaseMesh\\Cube.obj");
+    Mesh mesh{};
+    reader.Read("C:\\Users\\turon\\Downloads\\fdx54mtvuz28-FinalBaseMesh\\Cube\\cube.obj");
+
+    const auto& meshes = reader.GetMeshes();
 
     // Main loop
     bool done = false;
@@ -136,7 +138,9 @@ int main(int, char**)
         // Rendering
 
         ProcEvents();
-        renderer.RenderMesh(mesh);
+
+        for (const auto& [name, mesh] : meshes)
+            renderer.RenderMesh(mesh);
 
         ImGui::Render();
 

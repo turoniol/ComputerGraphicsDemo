@@ -23,6 +23,12 @@ struct Mesh {
 		Color color;
 	};
 
+	struct Material {
+		Color ambient, diffuse, specular;
+		float shininess;
+	};
+
+
 	Mesh() = default;
 	Mesh(std::vector<Vertex>&& vertices);
 
@@ -32,6 +38,8 @@ struct Mesh {
 			m_vertices.push_back(Vertex{ poly.points[i], poly.normal, poly.color });
 		}
 	}
+	
+	Material material{ { 0.2, 0.2, 0.2, 1.0 }, { 0.2, 0.2, 0.2, 1.0 }, { 0.6, 0.6, 0.6, 1.0 }, 32.0f };
 private:
 	std::vector<Vertex> m_vertices;
 };

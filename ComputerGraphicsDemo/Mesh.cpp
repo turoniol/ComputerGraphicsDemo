@@ -8,4 +8,5 @@
 
 Mesh::Mesh(std::vector<Vertex>&& vertices) 
 	: m_vertices(std::move(vertices)) {
+
 }

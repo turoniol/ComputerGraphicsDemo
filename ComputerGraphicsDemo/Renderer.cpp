@@ -34,7 +34,9 @@ void Renderer::BeginFrame()
 		glLoadMatrixf(GetFloat4x4(camera->LookAt()).m[0]);
 
 		GLfloat lightColor[] = { EXPAND4f(lightSource.color) };
+		glLightfv(GL_LIGHT0, GL_AMBIENT, lightColor);
 		glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor);
+		glLightfv(GL_LIGHT0, GL_SPECULAR, lightColor);
 
 		GLfloat lightPosition[] = { EXPAND3f(lightSource.position), 0.0 };
 		glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
@@ -44,12 +46,19 @@ void Renderer::BeginFrame()
 		glMatrixMode(GL_PROJECTION);
 		glLoadMatrixf(GetFloat4x4(viewport->ProjectionMatrix()).m[0]);
 	}
-
 }
 
 void Renderer::RenderMesh(const Mesh& mesh) {
-	GLfloat materialAmbientDiffuse[] = { 1.0, 1.0, 0.0, 1.0 };
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, materialAmbientDiffuse);
+	const GLfloat ambient[] = { EXPAND4f(mesh.material.ambient) };
+	const GLfloat diffuse[] = { EXPAND4f(mesh.material.diffuse) };
+	const GLfloat specular[] = { EXPAND4f(mesh.material.specular) };
+	const GLfloat shininess[] = { mesh.material.shininess };
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, ambient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, specular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+
 	glBegin(GL_TRIANGLES);
 	for (const auto& [position, normal, color] : mesh.m_vertices) {
 		glColor4f(EXPAND4f(color));

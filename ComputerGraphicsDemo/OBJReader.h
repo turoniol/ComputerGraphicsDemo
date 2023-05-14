@@ -4,15 +4,19 @@
 #include <vector>
 #include <functional>
 #include <string>
+#include <map>
+
+#include "Mesh.h"
 
 #include "TemplateHelper.h"
+#include "ReaderBase.h"
 
-struct Mesh;
-
-class OBJReader
+class OBJReader : public ReaderBase
 {
 public:
-	Mesh Read(const std::string& filepath);
+	OBJReader();
+
+	const std::map<std::string, Mesh>& GetMeshes() const;
 private:
 	template <class T, std::size_t N> 
 	struct Vec { 
@@ -50,26 +54,27 @@ private:
 
 		return vec;
 	}
-	
-
-	using ParseFunc = std::function<void(std::stringstream&)>;
-#define ParsePair(val, func) { val, [this](std::stringstream& str) { func(str); } }
-#define IgnorePair(val) { val, [](std::stringstream& str) {} }
 
 	void Clear();
 
-	Mesh BuildMesh() const;
-
-	void ParseLine(const std::string& str);
+	void BuildMesh();
 
 	void ParseVertex(std::stringstream& str);
 	void ParseNormal(std::stringstream& str);
 	void ParseTexCoord(std::stringstream& str);
 	void ParseFace(std::stringstream& str);
+	void ParseObject(std::stringstream& str);
+	void ParseMtllib(std::stringstream& str);
+	void ParseUsemtl(std::stringstream& str);
 
+	std::string m_name;
+	std::string m_material;
 	std::vector<Vec3f> m_vertices;
 	std::vector<Vec3f> m_normals;
 	std::vector<Vec2f> m_texcoords;
 	std::vector<Face> m_faces;
+
+	std::map<std::string, Mesh::Material> m_materials;
+	std::map<std::string, Mesh> m_objects;
 };
 
