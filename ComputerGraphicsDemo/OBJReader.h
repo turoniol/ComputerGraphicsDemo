@@ -5,6 +5,8 @@
 #include <functional>
 #include <string>
 
+#include "TemplateHelper.h"
+
 struct Mesh;
 
 class OBJReader
@@ -12,11 +14,26 @@ class OBJReader
 public:
 	Mesh Read(const std::string& filepath);
 private:
-	template <class T, std::size_t N> struct Vec { std::array<T, N> data; };
+	template <class T, std::size_t N> 
+	struct Vec { 
+		std::array<T, N> data;
 
-	union FaceData {
+		template <class U>
+		operator U() const {
+			return construct_from_array<U>(data, std::make_index_sequence<N>());
+		}
+	};
+
+	using Vec2f = Vec<float, 2>;
+	using Vec3f = Vec<float, 3>;
+	using Vec4f = Vec<float, 4>;
+
+	struct FaceData {
 		std::size_t data[3];
-		std::size_t v, vt, vn;
+		std::size_t& operator[](std::size_t i) { return data[i]; }
+		const std::size_t& v() const { return data[0]; }
+		const std::size_t& vt() const { return data[1]; }
+		const std::size_t& vn() const { return data[2]; }
 	};
 
 	struct Face {
@@ -33,10 +50,6 @@ private:
 
 		return vec;
 	}
-
-	using Vec2f = Vec<float, 2>;
-	using Vec3f = Vec<float, 3>;
-	using Vec4f = Vec<float, 4>;
 	
 
 	using ParseFunc = std::function<void(std::stringstream&)>;

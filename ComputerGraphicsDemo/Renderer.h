@@ -1,8 +1,24 @@
 #pragma once
 
-struct Mesh;
+#include "FundamentalTypes.h"
 
-struct Renderer
-{
-	static void RenderMesh(const Mesh& mesh);
+struct Mesh;
+struct Viewport;
+class Camera;
+
+struct Renderer {
+	Renderer();
+
+	void BeginFrame();
+	void RenderMesh(const Mesh& mesh);
+
+	Camera* camera = nullptr;
+	Viewport* viewport = nullptr;
+
+	Color clearColor;
+
+	struct Light {
+		Point position;
+		Color color;
+	} lightSource;
 };

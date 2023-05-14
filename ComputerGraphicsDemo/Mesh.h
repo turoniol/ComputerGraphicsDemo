@@ -1,14 +1,11 @@
 #pragma once
 
 #include <vector>
-#include <DirectXMath.h>
+#include "FundamentalTypes.h"
 
 struct Mesh {
 	friend struct Renderer;
 
-	using Point = DirectX::XMFLOAT3;
-	using Vector = DirectX::XMFLOAT3;
-	using Color = DirectX::XMFLOAT4;
 
 	template <std::size_t N>
 	struct Polygon {
@@ -25,8 +22,6 @@ struct Mesh {
 		Vector normal;
 		Color color;
 	};
-
-	static int ComparePoints(const Point& left, const Point& right);
 
 	Mesh() = default;
 	Mesh(std::vector<Vertex>&& vertices);

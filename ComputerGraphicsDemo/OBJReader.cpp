@@ -23,24 +23,27 @@ Mesh OBJReader::Read(const std::string& filepath) {
 }
 
 Mesh OBJReader::BuildMesh() const {
+    auto adjustIndex = [this](std::size_t index) {
+        if (index < 0)
+            index = m_vertices.size() - index;
+        else
+            index = index - 1;
+
+        return index;
+    };
+
     Mesh mesh;
 
     for (const auto& face : m_faces) {
         Mesh::Triangle triangle{};
-        triangle.normal = { 0, 1, 0 };
-        triangle.color = { 1, 1, 0, 1 };
 
         for (auto i = 0u; i < 3; ++i) {
-            auto index = face.data[i].v;
-
-            if (index < 0)
-                index = m_vertices.size() - index;
-            else
-                index = index - 1;
-
-            const auto& vertex = m_vertices[index];
-            triangle.points[i] = Mesh::Point{ vertex.data[0], vertex.data[1], vertex.data[2] };
+            auto index = adjustIndex(face.data[i].v());
+            triangle.points[i] = m_vertices[index];
         }
+
+        triangle.normal = m_normals[adjustIndex(face.data[0].vn())];
+        triangle.color = { 1, 1, 0, 1 };
 
         mesh.AddPolygon(std::move(triangle));
     }
@@ -57,7 +60,7 @@ void OBJReader::ParseTexCoord(std::stringstream& str) {
 }
 
 void OBJReader::ParseNormal(std::stringstream& str) {
-    (void*)&str;
+    m_normals.emplace_back(ReadVec<float, 3>(str));
 }
 
 void OBJReader::ParseFace(std::stringstream& str) {

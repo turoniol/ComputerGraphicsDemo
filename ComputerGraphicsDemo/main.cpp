@@ -19,6 +19,17 @@
 #include "Mesh.h"
 #include "Renderer.h"
 #include "OBJReader.h"
+#include "Camera.h"
+#include "Viewport.h"
+
+#define IMGUI_INPUTFLOAT3(name, value) \
+    if (float input[3]{ EXPAND3f(value) }; \
+    ImGui::InputFloat3(name, input)) { \
+        value = { input[0], input[1], input[2] }; \
+    }
+
+Camera camera;
+Viewport viewport(1280, 800);
 
 // Data stored per platform window
 struct WGL_WindowData { HDC hDC; };
@@ -26,8 +37,6 @@ struct WGL_WindowData { HDC hDC; };
 // Data
 static HGLRC            g_hRC;
 static WGL_WindowData   g_MainWindow;
-static int              g_Width;
-static int              g_Height;
 
 
 // Forward declarations of helper functions
@@ -35,13 +44,15 @@ bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data);
 void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data);
 void ResetDeviceWGL();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+void ProcEvents();
 
 // Main code
 int main(int, char**)
 {
     WNDCLASSEXW wc = { sizeof(wc), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, L"ImGui Example", NULL };
     ::RegisterClassExW(&wc);
-    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui Win32+OpenGL3 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui Win32+OpenGL3 Example", WS_OVERLAPPEDWINDOW, 100, 100, viewport.width, viewport.height, NULL, NULL, wc.hInstance, NULL);
+    PostMessage(hwnd, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
 
     // Initialize OpenGL
     if (!CreateDeviceWGL(hwnd, &g_MainWindow))
@@ -69,19 +80,15 @@ int main(int, char**)
     ImGui_ImplWin32_InitForOpenGL(hwnd);
     ImGui_ImplOpenGL3_Init();
 
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    Renderer renderer;
 
-    glEnable(GL_LIGHTING);
-    GLfloat lightPosition[] = { 3.0, 5.0, 3.0, 0.0 };  // Directional light from the positive x, y, and z directions
-    GLfloat lightColor[] = { 1.0, 1.0, 1.0, 1.0 };     // White light
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor);
+    camera.SetEyeTagerUp({ 0, 0, 3 }, { 0, 0, 0 }, { 0, 1, 0 });
 
-    // Enable light source
-    glEnable(GL_LIGHT0);
+    renderer.camera = &camera;
+    renderer.viewport = &viewport;
 
     OBJReader reader;
-    auto mesh = reader.Read("C:\\Users\\turon\\Downloads\\fdx54mtvuz28-FinalBaseMesh\\FinalBaseMesh.obj");
+    auto mesh = reader.Read("C:\\Users\\turon\\Downloads\\fdx54mtvuz28-FinalBaseMesh\\Cube.obj");
 
     // Main loop
     bool done = false;
@@ -100,17 +107,38 @@ int main(int, char**)
         if (done)
             break;
 
-        // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplWin32_NewFrame();
+        renderer.BeginFrame();
         ImGui::NewFrame();
+
+        ImGui::Begin("Info");
+        ImGui::Text("FPS: %f", 1.f / io.DeltaTime);
+        ImGui::Text("Delta time: %f", io.DeltaTime);
+        ImGui::End();
+
+        ImGui::Begin("Lighting");
+        if (float pos[3]{ EXPAND3f(renderer.lightSource.position) };
+            ImGui::InputFloat3("Position ", pos)) {
+            renderer.lightSource.position = { pos[0], pos[1], pos[2]};
+        }
+        if (float lightColor[3]{ EXPAND3f(renderer.lightSource.color) }; 
+            ImGui::ColorEdit3("Color", lightColor)) {
+            renderer.lightSource.color = { lightColor[0], lightColor[1], lightColor[2], 1.0f };
+        }
+        ImGui::End();
+
+        ImGui::Begin("Camera");
+        IMGUI_INPUTFLOAT3("Position", camera.m_eye);
+        IMGUI_INPUTFLOAT3("Target", camera.m_target);
+        ImGui::End();
+
         // Rendering
+
+        ProcEvents();
+        renderer.RenderMesh(mesh);
+
         ImGui::Render();
-
-        glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        Renderer::RenderMesh(mesh);
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -128,6 +156,40 @@ int main(int, char**)
     ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
 
     return 0;
+}
+
+void ProcEvents() {
+    auto& io = ImGui::GetIO();
+    const float cameraDelta = 2.f * io.DeltaTime;
+    const float zoomDelta = 0.3f;
+
+    if (ImGui::IsKeyDown(ImGuiKey_A))
+        camera.Translate(-cameraDelta * camera.CalcRight());
+    else if (ImGui::IsKeyDown(ImGuiKey_D))
+        camera.Translate(cameraDelta * camera.CalcRight());
+    
+    else if (ImGui::IsKeyDown(ImGuiKey_W))
+        camera.Translate(cameraDelta * camera.CalcDir());
+    else if (ImGui::IsKeyDown(ImGuiKey_S))
+        camera.Translate(-cameraDelta * camera.CalcDir());
+
+
+    if (io.WantCaptureMouse)
+        return;
+
+    if (io.MouseWheel != 0)
+        camera.Zoom(io.MouseWheel * zoomDelta);
+
+    if ((io.MouseDelta.x != 0.f) || (io.MouseDelta.y != 0.f)) {
+        const ImVec2& delta = io.MouseDelta;
+        const ImVec2& pos = io.MousePos;
+        const ImVec2 prevPos{ pos.x - delta.x, pos.y - delta.y };
+
+        if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
+            camera.Orbit(prevPos.x, prevPos.y, pos.x, pos.y, viewport);
+        else if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+            camera.Pan(prevPos.x, prevPos.y, pos.x, pos.y, viewport);
+    }
 }
 
 // Helper functions
@@ -178,8 +240,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
         if (wParam != SIZE_MINIMIZED)
         {
-            g_Width = LOWORD(lParam);
-            g_Height = HIWORD(lParam);
+            viewport.width = LOWORD(lParam);
+            viewport.height = HIWORD(lParam);
         }
         return 0;
     case WM_SYSCOMMAND:
