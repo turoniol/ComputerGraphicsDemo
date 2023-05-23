@@ -9,7 +9,8 @@
 #include <ranges>
 #include <filesystem>
 
-OBJReader::OBJReader()
+OBJReader::OBJReader(const std::string& file)
+    : ReaderBase(file)
 {
     ParsePair("v", ParseVertex);
     ParsePair("vt", ParseTexCoord);
@@ -59,100 +60,66 @@ void OBJReader::BuildMesh() {
     Clear();
 }
 
-void OBJReader::ParseVertex(std::stringstream& str) {
-    m_vertices.emplace_back(ReadVec<float, 3>(str));
+void OBJReader::ParseVertex() {
+    m_vertices.emplace_back(ReadVec<float, 3>(m_fileStr));
 }
 
-void OBJReader::ParseTexCoord(std::stringstream& str) {
-    (void *)&str;
+void OBJReader::ParseTexCoord() {
+    Ignore();
 }
 
-void OBJReader::ParseNormal(std::stringstream& str) {
-    m_normals.emplace_back(ReadVec<float, 3>(str));
+void OBJReader::ParseNormal() {
+    m_normals.emplace_back(ReadVec<float, 3>(m_fileStr));
 }
 
-void OBJReader::ParseFace(std::stringstream& str) {
+void OBJReader::ParseFace() {
+
     std::string text;
     Face face;
 
-    while (str >> text) {
-        FaceData faceData{};
+    auto faceInfo = ReadVec<std::string, 3>(m_fileStr);
 
-        std::size_t* index = faceData.data;
+    constexpr std::string_view indexDelim{ "/" };
+    for (std::size_t i = 0; i < 3; ++i) {
+        FaceData fdata{};
+        
+        std::size_t internalIndex = 0;
+        for (const auto word : std::views::split(faceInfo.data[i], indexDelim)) {
+            int res = 0;
 
-        for (auto word : std::views::split(text, '/')) {
-            if (word.empty())
-                face.useVt = false;
-            else
-                *index = std::stoi(word.data());
+            if (!word.empty())
+                res = std::stoi(word.data());
 
-            index++;
+            fdata.data[internalIndex++] = res;
         }
 
-        face.data.emplace_back(std::move(faceData));
+        face.data.emplace_back(std::move(fdata));
     }
 
     m_faces.emplace_back(std::move(face));
 }
 
-void OBJReader::ParseObject(std::stringstream& str)
+void OBJReader::ParseObject()
 {
-    str >> m_name;
+    m_fileStr >> m_name;
 
     if (!m_objects.empty())
         BuildMesh();
 }
 
-void OBJReader::ParseMtllib(std::stringstream& str)
+void OBJReader::ParseMtllib()
 {
-    ReaderBase mtlReader;
-
-    Mesh::Material mat{};
-    std::string matName{};
-    auto newmtl = [&](std::stringstream& sstr) {
-        if (!m_materials.empty()) {
-            m_materials.insert({ matName, mat });
-            matName = {};
-            mat = {};
-        }
-
-        sstr >> matName;
-    };
-    auto Ka = [&](std::stringstream& sstr) {
-        auto v = ReadVec<float, 3>(sstr);
-        mat.ambient = DirectX::XMVectorSet(v.data[0], v.data[1], v.data[2], 1.0f);
-    };
-    auto Kd = [&](std::stringstream& sstr) {
-        auto v = ReadVec<float, 3>(sstr);
-        mat.diffuse = DirectX::XMVectorSet(v.data[0], v.data[1], v.data[2], 1.0f);
-    };
-    auto Ks = [&](std::stringstream& sstr) {
-        auto v = ReadVec<float, 3>(sstr);
-        mat.specular = DirectX::XMVectorSet(v.data[0], v.data[1], v.data[2], 1.0f);
-
-    };
-    auto Ns = [&](std::stringstream& sstr) {
-        sstr >> mat.shininess;
-    };
-
-    mtlReader.m_actions.insert({ "newmtl", newmtl });
-    mtlReader.m_actions.insert({ "Ka", Ka });
-    mtlReader.m_actions.insert({ "Kd", Kd });
-    mtlReader.m_actions.insert({ "Ks", Ks });
-    mtlReader.m_actions.insert({ "Ns", Ns });
-
-    mtlReader.endFunc = [&]() {
-        m_materials.insert({ matName, mat });
-    };
-
     std::string path{};
-    str >> path;
-    mtlReader.Read(std::filesystem::path(workingDir).append(path).string());
+    m_fileStr >> path;
+    MTLReader mtlReader(std::filesystem::path(workingDir).append(path).string());
+    mtlReader.Read();
+
+    m_materials = mtlReader.GetMaterials();
 }
 
-void OBJReader::ParseUsemtl(std::stringstream& str)
+void OBJReader::ParseUsemtl()
 {
-    str >> m_material;
+    m_fileStr >> m_material;
 }
 
 void OBJReader::Clear() {
@@ -162,4 +129,55 @@ void OBJReader::Clear() {
     m_normals.clear();
     m_texcoords.clear();
     m_faces.clear();
+}
+
+MTLReader::MTLReader(const std::string& file)
+    : ReaderBase(file)
+{
+    ParsePair("newmtl", ParseNewmtl);
+    ParsePair("Ka", ParseKa);
+    ParsePair("Kd", ParseKd);
+    ParsePair("Ks", ParseKs);
+    ParsePair("Ns", ParseNs);
+
+    endFunc = [this] {
+        m_materials.insert({ m_materialName, m_material });
+    };
+}
+
+const std::map<std::string, Mesh::Material> MTLReader::GetMaterials() const
+{
+    return m_materials;
+}
+
+void MTLReader::ParseNewmtl()
+{
+    if (!m_materials.empty())
+        m_materials.insert({ m_materialName, m_material });
+
+    m_fileStr >> m_materialName;
+    m_material = {};
+}
+
+void MTLReader::ParseKa()
+{
+    auto v = ReadVec<float, 3>(m_fileStr);
+    m_material.ambient = DirectX::XMVectorSet(v.data[0], v.data[1], v.data[2], 1.f);
+}
+
+void MTLReader::ParseKd()
+{
+    auto v = ReadVec<float, 3>(m_fileStr);
+    m_material.diffuse = DirectX::XMVectorSet(v.data[0], v.data[1], v.data[2], 1.f);
+}
+
+void MTLReader::ParseKs()
+{
+    auto v = ReadVec<float, 3>(m_fileStr);
+    m_material.specular = DirectX::XMVectorSet(v.data[0], v.data[1], v.data[2], 1.f);
+}
+
+void MTLReader::ParseNs()
+{
+    m_fileStr >> m_material.shininess;
 }

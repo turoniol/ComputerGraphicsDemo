@@ -5,20 +5,16 @@
 struct Mesh;
 struct Viewport;
 class Camera;
+class Scene;
 
 struct Renderer {
 	Renderer();
 
-	void BeginFrame();
+	void BeginFrame(int vpWidth, int vpHeight);
+	void SetMatrices(Matrix4x4 world, Matrix4x4 view, Matrix4x4 proj);
 	void RenderMesh(const Mesh& mesh);
 
-	Camera* camera = nullptr;
-	Viewport* viewport = nullptr;
+	void SetLight(Point position, Color color);
 
 	Color clearColor;
-
-	struct Light {
-		Point position;
-		Color color;
-	} lightSource;
 };

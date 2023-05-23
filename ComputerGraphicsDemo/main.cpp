@@ -18,9 +18,10 @@
 
 #include "Mesh.h"
 #include "Renderer.h"
-#include "OBJReader.h"
+#include "MOSDReader.h"
 #include "Camera.h"
 #include "Viewport.h"
+#include "Scene.h"
 
 #define IMGUI_INPUTFLOAT3(name, value) \
     if (float input[3]{ EXPAND3f(value) }; \
@@ -42,7 +43,6 @@ static WGL_WindowData   g_MainWindow;
 // Forward declarations of helper functions
 bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data);
 void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data);
-void ResetDeviceWGL();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void ProcEvents();
 
@@ -83,14 +83,10 @@ int main(int, char**)
 
     camera.SetEyeTagerUp({ 0, 0, 3 }, { 0, 0, 0 }, { 0, 1, 0 });
 
-    renderer.camera = &camera;
-    renderer.viewport = &viewport;
+    MOSDReader reader("C:\\Users\\turon\\Downloads\\fdx54mtvuz28-FinalBaseMesh\\Cube\\cube.mosd");
+    reader.Read();
 
-    OBJReader reader;
-    Mesh mesh{};
-    reader.Read("C:\\Users\\turon\\Downloads\\fdx54mtvuz28-FinalBaseMesh\\Cube\\cube.obj");
-
-    const auto& meshes = reader.GetMeshes();
+    Scene scene = reader.GetScene();
 
     // Main loop
     bool done = false;
@@ -111,7 +107,7 @@ int main(int, char**)
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplWin32_NewFrame();
-        renderer.BeginFrame();
+        renderer.BeginFrame(viewport.width, viewport.height);
         ImGui::NewFrame();
 
         ImGui::Begin("Info");
@@ -120,14 +116,14 @@ int main(int, char**)
         ImGui::End();
 
         ImGui::Begin("Lighting");
-        if (float pos[3]{ EXPAND3f(renderer.lightSource.position) };
-            ImGui::InputFloat3("Position ", pos)) {
-            renderer.lightSource.position = { pos[0], pos[1], pos[2]};
-        }
-        if (float lightColor[3]{ EXPAND3f(renderer.lightSource.color) }; 
-            ImGui::ColorEdit3("Color", lightColor)) {
-            renderer.lightSource.color = { lightColor[0], lightColor[1], lightColor[2], 1.0f };
-        }
+        //if (float pos[3]{ EXPAND3f(renderer.lightSource.position) };
+        //    ImGui::InputFloat3("Position ", pos)) {
+        //    renderer.lightSource.position = { pos[0], pos[1], pos[2]};
+        //}
+        //if (float lightColor[3]{ EXPAND3f(renderer.lightSource.color) }; 
+        //    ImGui::ColorEdit3("Color", lightColor)) {
+        //    renderer.lightSource.color = { lightColor[0], lightColor[1], lightColor[2], 1.0f };
+        //}
         ImGui::End();
 
         ImGui::Begin("Camera");
@@ -139,8 +135,8 @@ int main(int, char**)
 
         ProcEvents();
 
-        for (const auto& [name, mesh] : meshes)
-            renderer.RenderMesh(mesh);
+        scene.SetupCamera(camera.m_eye, camera.m_target, camera.m_up);
+        scene.RenderScene(renderer, viewport.ProjectionMatrix());
 
         ImGui::Render();
 

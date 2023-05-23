@@ -1,36 +1,46 @@
 #include "ReaderBase.h"
 
-#include <fstream>
-#include <filesystem>
 
 #include "Logger.h"
 
-void ReaderBase::Read(const std::string& filepath)
-{
-    workingDir = std::filesystem::path(filepath).parent_path().string();
-    std::ifstream str(filepath);
+ReaderBase::ReaderBase(const std::string& filepath) 
+    : workingDir(std::filesystem::path(filepath).parent_path()),
+    m_fileStr(filepath) 
+{ }
 
-    std::string line;
-    while (std::getline(str, line)) {
-        ParseLine(line);
+void ReaderBase::Read() {
+    std::string chunk{};
+    while (GetChunk(chunk)) {
+        ParseTokens(chunk);
     }
 
     endFunc();
 }
 
-void ReaderBase::ParseLine(const std::string& line) 
+bool ReaderBase::GetChunk(std::string& chunk) {
+    return static_cast<bool>(m_fileStr >> chunk);
+}
+
+void ReaderBase::Ignore()
 {
+    std::string data{};
+    std::getline(m_fileStr, data);
+}
+
+void ReaderBase::ParseTokens(const std::string& chunk) {
     std::string prefix;
-    std::stringstream sstr(line);
+    std::stringstream sstr(chunk);
     sstr >> prefix;
 
     if (prefix.empty())
         return;
 
-    auto finded = m_actions.find(prefix);
+    auto finded = actions.find(prefix);
 
-    if (finded == m_actions.end())
+    if (finded == actions.end()) {
+        Ignore();
         LOGERRRET("No such option: ", prefix);
+    }
 
-    finded->second(sstr);
+    finded->second();
 }

@@ -30,6 +30,8 @@ struct Mesh {
 
 
 	Mesh() = default;
+	Mesh(const Mesh&) = default;
+	Mesh(Mesh&&) = default;
 	Mesh(std::vector<Vertex>&& vertices);
 
 	template <std::size_t N>
@@ -39,7 +41,7 @@ struct Mesh {
 		}
 	}
 	
-	Material material{ { 0.2, 0.2, 0.2, 1.0 }, { 0.2, 0.2, 0.2, 1.0 }, { 0.6, 0.6, 0.6, 1.0 }, 32.0f };
+	Material material{ { 0.2f, 0.2f, 0.2f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }, { 0.6f, 0.6f, 0.6f, 1.0f }, 32.0f };
 private:
 	std::vector<Vertex> m_vertices;
 };

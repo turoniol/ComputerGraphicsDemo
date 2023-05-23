@@ -11,41 +11,38 @@
 #include "Viewport.h"
 
 Renderer::Renderer()
-	: clearColor{ 0.1f, 0.1f, 0.1f, 1.f },
-	lightSource{ { 100.f, 160.f, 100.f }, { 1.f, 1.f, 1.f, 1.f }}
+	: clearColor{ 0.1f, 0.1f, 0.1f, 1.f }
 {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
-
 	glEnable(GL_LIGHT0);
 }
 
-void Renderer::BeginFrame()
+void Renderer::BeginFrame(int vpWidth, int vpHeight)
 {
-	assert(camera);
-	assert(viewport);
-
 	glClearColor(EXPAND4f(clearColor));
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glViewport(0, 0, viewport->width, viewport->height);
+	glViewport(0, 0, vpWidth, vpHeight);
+}
 
-	{
-		glMatrixMode(GL_MODELVIEW);
-		glLoadMatrixf(GetFloat4x4(camera->LookAt()).m[0]);
+void Renderer::SetLight(Point position, Color color)
+{
+	GLfloat lightColor[] = { EXPAND4f(color) };
+	glLightfv(GL_LIGHT0, GL_AMBIENT, lightColor);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, lightColor);
 
-		GLfloat lightColor[] = { EXPAND4f(lightSource.color) };
-		glLightfv(GL_LIGHT0, GL_AMBIENT, lightColor);
-		glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor);
-		glLightfv(GL_LIGHT0, GL_SPECULAR, lightColor);
+	GLfloat lightPosition[] = { EXPAND3f(position), 0.0 };
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+}
 
-		GLfloat lightPosition[] = { EXPAND3f(lightSource.position), 0.0 };
-		glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-	}
-
-	{
-		glMatrixMode(GL_PROJECTION);
-		glLoadMatrixf(GetFloat4x4(viewport->ProjectionMatrix()).m[0]);
-	}
+void Renderer::SetMatrices(Matrix4x4 world, Matrix4x4 view, Matrix4x4 proj)
+{
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(GetFloat4x4(view).m[0]);
+	glMultMatrixf(GetFloat4x4(world).m[0]);
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixf(GetFloat4x4(proj).m[0]);
 }
 
 void Renderer::RenderMesh(const Mesh& mesh) {
