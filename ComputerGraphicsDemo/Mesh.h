@@ -2,10 +2,10 @@
 
 #include <vector>
 #include "FundamentalTypes.h"
+#include <DirectXCollision.h>
 
 struct Mesh {
 	friend struct Renderer;
-
 
 	template <std::size_t N>
 	struct Polygon {
@@ -34,6 +34,8 @@ struct Mesh {
 	Mesh(Mesh&&) = default;
 	Mesh(std::vector<Vertex>&& vertices);
 
+	DirectX::BoundingBox& GetBoundingBox();
+
 	template <std::size_t N>
 	void AddPolygon(Polygon<N>&& poly) {
 		for (std::size_t i = 0; i < N; ++i) {
@@ -44,5 +46,6 @@ struct Mesh {
 	Material material{ { 0.2f, 0.2f, 0.2f, 1.0f }, { 0.2f, 0.2f, 0.2f, 1.0f }, { 0.6f, 0.6f, 0.6f, 1.0f }, 32.0f };
 private:
 	std::vector<Vertex> m_vertices;
+	DirectX::BoundingBox m_boundingBox;
 };
 

@@ -142,11 +142,14 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshNode.cpp" />
-    <ClCompile Include="MOSDReader.cpp" />
-    <ClCompile Include="OBJReader.cpp" />
-    <ClCompile Include="ReaderBase.cpp" />
+    <ClCompile Include="GUI\PropertryWindow.cpp" />
+    <ClCompile Include="GUI\MeshNodePropertyWindow.cpp" />
+    <ClCompile Include="Readers\MOSDReader.cpp" />
+    <ClCompile Include="Readers\OBJReader.cpp" />
+    <ClCompile Include="Readers\ReaderBase.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="GUI\ScenePropertyWindow.cpp" />
     <ClCompile Include="Viewport.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -163,11 +166,14 @@
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshNode.h" />
-    <ClInclude Include="MOSDReader.h" />
-    <ClInclude Include="OBJReader.h" />
-    <ClInclude Include="ReaderBase.h" />
+    <ClInclude Include="GUI\PropertryWindow.h" />
+    <ClInclude Include="GUI\MeshNodePropertyWindow.h" />
+    <ClInclude Include="Readers\MOSDReader.h" />
+    <ClInclude Include="Readers\OBJReader.h" />
+    <ClInclude Include="Readers\ReaderBase.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Scene.h" />
+    <ClInclude Include="GUI\ScenePropertyWindow.h" />
     <ClInclude Include="TemplateHelper.h" />
     <ClInclude Include="Viewport.h" />
   </ItemGroup>

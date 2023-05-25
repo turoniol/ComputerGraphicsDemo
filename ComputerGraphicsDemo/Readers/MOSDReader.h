@@ -7,8 +7,8 @@
 #include <concepts>
 
 #include "ReaderBase.h"
-#include "FundamentalTypes.h"
-#include "MeshNode.h"
+#include "../FundamentalTypes.h"
+#include "../MeshNode.h"
 
 class Scene;
 struct Mesh;

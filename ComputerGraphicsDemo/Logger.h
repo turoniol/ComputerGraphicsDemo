@@ -4,7 +4,7 @@
 
 #define LOGERRRET(...) { Logger::LogErr(__VA_ARGS__); return; }
 #define LOGXMFLOAT(msg, vec) { Logger::Log(msg, DirectX::XMVectorGetX(vec)); }
-#define LOGXMFLOAT3(msg, vec) { Logger::Log(msg, DirectX::XMVectorGetX(vec), " ", XMVectorGetY(vec), " ", XMVectorGetZ(vec)); }
+#define LOGXMFLOAT3(msg, vec) { Logger::Log(msg, DirectX::XMVectorGetX(vec), " ", DirectX::XMVectorGetY(vec), " ", DirectX::XMVectorGetZ(vec)); }
 
 
 

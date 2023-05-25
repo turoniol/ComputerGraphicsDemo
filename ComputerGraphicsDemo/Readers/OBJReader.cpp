@@ -1,6 +1,6 @@
 #include "OBJReader.h"
 
-#include "Logger.h"
+#include "../Logger.h"
 
 #include <sstream>
 #include <fstream>

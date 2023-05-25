@@ -1,7 +1,7 @@
 #include "ReaderBase.h"
 
 
-#include "Logger.h"
+#include "../Logger.h"
 
 ReaderBase::ReaderBase(const std::string& filepath) 
     : workingDir(std::filesystem::path(filepath).parent_path()),

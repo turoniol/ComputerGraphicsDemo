@@ -18,19 +18,15 @@
 
 #include "Mesh.h"
 #include "Renderer.h"
-#include "MOSDReader.h"
+#include "Readers/MOSDReader.h"
 #include "Camera.h"
 #include "Viewport.h"
 #include "Scene.h"
+#include "GUI/ScenePropertyWindow.h"
+#include "GUI/MeshNodePropertyWindow.h"
 
-#define IMGUI_INPUTFLOAT3(name, value) \
-    if (float input[3]{ EXPAND3f(value) }; \
-    ImGui::InputFloat3(name, input)) { \
-        value = { input[0], input[1], input[2] }; \
-    }
-
-Camera camera;
 Viewport viewport(1280, 800);
+std::unique_ptr<Scene> scene;
 
 // Data stored per platform window
 struct WGL_WindowData { HDC hDC; };
@@ -81,12 +77,15 @@ int main(int, char**)
 
     Renderer renderer;
 
-    camera.SetEyeTagerUp({ 0, 0, 3 }, { 0, 0, 0 }, { 0, 1, 0 });
-
     MOSDReader reader("C:\\Users\\turon\\Downloads\\fdx54mtvuz28-FinalBaseMesh\\Cube\\cube.mosd");
     reader.Read();
+    scene = std::make_unique<Scene>(reader.GetScene());
 
-    Scene scene = reader.GetScene();
+    auto& camera = scene->GetCamera();
+
+    ScenePropertyWindow sceneProperty;
+    MeshNodePropertyWindow nodeProperty;
+    sceneProperty.SetScene(scene.get());
 
     // Main loop
     bool done = false;
@@ -115,28 +114,29 @@ int main(int, char**)
         ImGui::Text("Delta time: %f", io.DeltaTime);
         ImGui::End();
 
-        ImGui::Begin("Lighting");
-        //if (float pos[3]{ EXPAND3f(renderer.lightSource.position) };
-        //    ImGui::InputFloat3("Position ", pos)) {
-        //    renderer.lightSource.position = { pos[0], pos[1], pos[2]};
-        //}
-        //if (float lightColor[3]{ EXPAND3f(renderer.lightSource.color) }; 
-        //    ImGui::ColorEdit3("Color", lightColor)) {
-        //    renderer.lightSource.color = { lightColor[0], lightColor[1], lightColor[2], 1.0f };
-        //}
-        ImGui::End();
-
-        ImGui::Begin("Camera");
-        IMGUI_INPUTFLOAT3("Position", camera.m_eye);
-        IMGUI_INPUTFLOAT3("Target", camera.m_target);
-        ImGui::End();
-
         // Rendering
 
         ProcEvents();
 
-        scene.SetupCamera(camera.m_eye, camera.m_target, camera.m_up);
-        scene.RenderScene(renderer, viewport.ProjectionMatrix());
+        auto intersected = scene->FindIntersected(camera.CalcCursorRay(io.MousePos.x, io.MousePos.y, viewport));
+
+        if (!intersected.empty() && !io.WantCaptureMouse) {
+            const auto &[dist, closestNode] = *intersected.begin();
+            scene->HighlightNode(closestNode);
+
+            if (ImGui::IsKeyPressed(ImGuiKey_MouseLeft))
+                scene->SelectNode(io.KeyCtrl ? nullptr : closestNode);
+        }
+
+        sceneProperty.Render();
+
+        auto selectedNode = scene->GetSelectedNode();
+        if (selectedNode) {
+            nodeProperty.SetMeshNode(selectedNode);
+            nodeProperty.Render();
+        }
+
+        scene->RenderScene(renderer, viewport.ProjectionMatrix());
 
         ImGui::Render();
 
@@ -162,6 +162,7 @@ void ProcEvents() {
     auto& io = ImGui::GetIO();
     const float cameraDelta = 2.f * io.DeltaTime;
     const float zoomDelta = 0.3f;
+    auto& camera = scene->GetCamera();
 
     if (ImGui::IsKeyDown(ImGuiKey_A))
         camera.Translate(-cameraDelta * camera.CalcRight());

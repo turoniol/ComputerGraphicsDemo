@@ -23,25 +23,21 @@ void Camera::Zoom(float delta)
 		m_eye = newEye;
 }
 
-static Ray CalcCursorRay(float x, float y, const Camera& c, const Viewport& vp) {
-	auto far = XMVector3Unproject(XMVectorSet(x, y, 1.0f, 0.0f), 0, 0, vp.width, vp.height, 0.0f, 1.0f, vp.ProjectionMatrix(), c.LookAt(), XMMatrixIdentity());
-	auto near = XMVector3Unproject(XMVectorSet(x, y, 0.0f, 0.0f), 0, 0, vp.width, vp.height, 0.0f, 1.0f, vp.ProjectionMatrix(), c.LookAt(), XMMatrixIdentity());
+Ray Camera::CalcCursorRay(float x, float y, const Viewport& vp) {
+	auto far = XMVector3Unproject(XMVectorSet(x, y, 1.0f, 0.0f), 0, 0, vp.width, vp.height, 0.0f, 1.0f, vp.ProjectionMatrix(), LookAt(), XMMatrixIdentity());
+	auto near = XMVector3Unproject(XMVectorSet(x, y, 0.0f, 0.0f), 0, 0, vp.width, vp.height, 0.0f, 1.0f, vp.ProjectionMatrix(), LookAt(), XMMatrixIdentity());
 	return  { near, XMVector3Normalize(far - near) };
 }
 
 void Camera::Pan(float prevX, float prevY, float x, float y, const Viewport& vp)
 {
 	auto dir = CalcDir();
-	//dist /= cosf(vp.fov / 2.f);
 
-	auto prevRay = CalcCursorRay(prevX, prevY, *this, vp);
-	auto newRay = CalcCursorRay(x, y, *this, vp);
+	auto prevRay = CalcCursorRay(prevX, prevY, vp);
+	auto newRay = CalcCursorRay(x, y, vp);
 	auto targetPlane = XMPlaneFromPointNormal(m_target, dir);
 	auto prevPos = XMPlaneIntersectLine(targetPlane, prevRay.origin, prevRay.dir * (vp.farZ - vp.nearZ));
 	auto newPos = XMPlaneIntersectLine(targetPlane, newRay.origin, newRay.dir * (vp.farZ - vp.nearZ));
-
-	LOGXMFLOAT("Length: ", XMVector3Length(newPos));
-	LOGXMFLOAT3("Ray: ", newPos);
 
 	Translate(prevPos - newPos);
 }

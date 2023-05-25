@@ -1,7 +1,7 @@
 #include "MOSDReader.h"
 
-#include "Scene.h"
-#include "Mesh.h"
+#include "../Scene.h"
+#include "../Mesh.h"
 #include "OBJReader.h"
 
 #include <filesystem>
@@ -150,6 +150,7 @@ std::unique_ptr<Mesh> MOSDReader::MOSDGeometry::Instance(fs::path workingDir) co
 std::unique_ptr<MeshNode> MOSDReader::MOSDNode::Instance(const MOSDReader& reader) const
 {
     MeshNode meshNode(std::move(reader.m_geometries.at(geometry).Instance(reader.workingDir)));
+    meshNode.SetName(name);
     meshNode.Transform(reader.m_matrices.at(matrix).data);
     return std::make_unique<MeshNode>(std::move(meshNode));
 }

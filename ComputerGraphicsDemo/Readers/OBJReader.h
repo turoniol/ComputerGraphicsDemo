@@ -6,9 +6,8 @@
 #include <string>
 #include <map>
 
-#include "Mesh.h"
+#include "../Mesh.h"
 
-#include "TemplateHelper.h"
 #include "ReaderBase.h"
 
 class MTLReader : public ReaderBase

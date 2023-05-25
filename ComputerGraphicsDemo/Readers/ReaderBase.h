@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <fstream>
 
+#include "../TemplateHelper.h"
+
 class ReaderBase
 {
 public:

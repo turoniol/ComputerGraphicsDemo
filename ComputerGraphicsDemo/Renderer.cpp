@@ -2,9 +2,9 @@
 
 #include <windows.h>
 #include <GL/GL.h>
-#include <GL/GLU.h>
 
 #include <cassert>
+#include <array>
 
 #include "Mesh.h"
 #include "Camera.h"
@@ -16,6 +16,9 @@ Renderer::Renderer()
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
+
+	glEnable(GL_LINE_SMOOTH);
+	glLineWidth(3.0f);
 }
 
 void Renderer::BeginFrame(int vpWidth, int vpHeight)
@@ -43,6 +46,52 @@ void Renderer::SetMatrices(Matrix4x4 world, Matrix4x4 view, Matrix4x4 proj)
 	glMultMatrixf(GetFloat4x4(world).m[0]);
 	glMatrixMode(GL_PROJECTION);
 	glLoadMatrixf(GetFloat4x4(proj).m[0]);
+}
+
+void Renderer::RenderBoundingBox(DirectX::BoundingBox bb, std::array<float, 4> color)
+{
+	auto& c = bb.Center;
+	auto& e = bb.Extents;
+
+	std::array vertices{
+		DirectX::XMFLOAT3{ c.x - e.x, c.y - e.y, c.z - e.z },
+		DirectX::XMFLOAT3{ c.x - e.x, c.y + e.y, c.z - e.z },
+		DirectX::XMFLOAT3{ c.x + e.x, c.y + e.y, c.z - e.z },
+		DirectX::XMFLOAT3{ c.x + e.x, c.y - e.y, c.z - e.z },
+
+		DirectX::XMFLOAT3{ c.x - e.x, c.y - e.y, c.z + e.z },
+		DirectX::XMFLOAT3{ c.x - e.x, c.y + e.y, c.z + e.z },
+		DirectX::XMFLOAT3{ c.x + e.x, c.y + e.y, c.z + e.z },
+		DirectX::XMFLOAT3{ c.x + e.x, c.y - e.y, c.z + e.z },
+	};
+
+	std::array indices{
+		// Front face
+		0, 1,
+		1, 2,
+		2, 3,
+		3, 0,
+
+		// Back face
+		4, 5,
+		5, 6,
+		6, 7,
+		7, 4,
+
+		// Connecting lines
+		0, 4,
+		1, 5,
+		2, 6,
+		3, 7
+	};
+
+	glMaterialfv(GL_FRONT, GL_AMBIENT, color.data());
+	glBegin(GL_LINES);
+	for (int index : indices) {
+		const auto& v = vertices[index];
+		glVertex3f(v.x, v.y, v.z);
+	}
+	glEnd();
 }
 
 void Renderer::RenderMesh(const Mesh& mesh) {
