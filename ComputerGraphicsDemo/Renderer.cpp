@@ -42,8 +42,7 @@ void Renderer::SetLight(Point position, Color color)
 void Renderer::SetMatrices(Matrix4x4 world, Matrix4x4 view, Matrix4x4 proj)
 {
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(GetFloat4x4(view).m[0]);
-	glMultMatrixf(GetFloat4x4(world).m[0]);
+	glLoadMatrixf(GetFloat4x4(world * view).m[0]);
 	glMatrixMode(GL_PROJECTION);
 	glLoadMatrixf(GetFloat4x4(proj).m[0]);
 }

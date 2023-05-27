@@ -12,7 +12,7 @@ MeshNode::MeshNode(std::unique_ptr<Mesh> mesh)
 
 Matrix4x4 MeshNode::AbsoluteMatrix() const
 {
-    return m_parent ? DirectX::XMMatrixMultiply(m_transform, m_parent->AbsoluteMatrix()) : m_transform;
+    return m_parent ? m_transform * m_parent->AbsoluteMatrix() : m_transform;
 }
 
 Matrix4x4 MeshNode::Matrix() const
@@ -27,7 +27,7 @@ void MeshNode::SetMatrix(Matrix4x4 m)
 
 void MeshNode::Transform(Matrix4x4 m)
 {
-    m_transform = DirectX::XMMatrixMultiply(m_transform, m);
+    m_transform = m_transform * m;
 }
 
 const Mesh* MeshNode::GetMesh() const

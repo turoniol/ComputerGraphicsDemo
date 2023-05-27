@@ -29,6 +29,7 @@ void Scene::RenderScene(Renderer& renderer, Matrix4x4 projMatrix)
     renderer.SetLight(m_light.pos, m_light.color);
 
     auto renderMeshNode = [&](MeshNode* node) {
+        const bool isSelected = m_selectedNode == node;
         auto finded = m_highlightingMaterials.find(node);
         auto& material = node->GetMesh()->material;
 
@@ -41,8 +42,9 @@ void Scene::RenderScene(Renderer& renderer, Matrix4x4 projMatrix)
         auto mesh = node->GetMesh();
         renderer.SetMatrices(node->AbsoluteMatrix(), lookAt, projMatrix);
         renderer.RenderMesh(*mesh);
-        auto borderColor = m_selectedNode != node ? std::array<float, 4>{ 1.0f, 0.0f, 0.0f, 1.0f } : std::array<float, 4>{ 0.5372f, 0.7294f, 0.8745f, 1.0f };
-        renderer.RenderBoundingBox(mesh->GetBoundingBox(), borderColor);
+        
+        if (isSelected)
+            renderer.RenderBoundingBox(mesh->GetBoundingBox(), { 0.8f, 0.4f, 0.3745f, 1.0f });
 
         material = materialBackup;
     };
@@ -99,13 +101,13 @@ std::map<float, MeshNode*> Scene::FindIntersected(Ray r) const
     std::map<float, MeshNode*> nodes;
 
     auto f = [&](MeshNode* node) {
-        if (!DirectX::Internal::XMVector3IsUnit(r.dir))
+        if (DirectX::XMVector3Equal(r.dir, DirectX::XMVectorSet(0.f, 0.f, 0.f, 0.f)))
             return;
 
         if (node->GetMesh() == nullptr)
             return;
 
-        float dist{  };
+        float dist{};
 
         if (node->GetBoundingBox().Intersects(r.origin, r.dir, dist))
             nodes.insert({ dist, node });

@@ -25,6 +25,8 @@
 #include "GUI/ScenePropertyWindow.h"
 #include "GUI/MeshNodePropertyWindow.h"
 
+namespace dx = DirectX;
+
 Viewport viewport(1280, 800);
 std::unique_ptr<Scene> scene;
 
@@ -41,6 +43,9 @@ bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data);
 void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data);
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 void ProcEvents();
+
+Matrix4x4 Orbit(float prevX, float prevY, float x, float y, const Viewport& vp, const Matrix4x4& lookAt, Point rotationPoint);
+Matrix4x4 Pan(float prevX, float prevY, float x, float y, const Viewport& vp, Point pointOnPlane);
 
 // Main code
 int main(int, char**)
@@ -118,16 +123,6 @@ int main(int, char**)
 
         ProcEvents();
 
-        auto intersected = scene->FindIntersected(camera.CalcCursorRay(io.MousePos.x, io.MousePos.y, viewport));
-
-        if (!intersected.empty() && !io.WantCaptureMouse) {
-            const auto &[dist, closestNode] = *intersected.begin();
-            scene->HighlightNode(closestNode);
-
-            if (ImGui::IsKeyPressed(ImGuiKey_MouseLeft))
-                scene->SelectNode(io.KeyCtrl ? nullptr : closestNode);
-        }
-
         sceneProperty.Render();
 
         auto selectedNode = scene->GetSelectedNode();
@@ -181,16 +176,91 @@ void ProcEvents() {
     if (io.MouseWheel != 0)
         camera.Zoom(io.MouseWheel * zoomDelta);
 
+    auto selectedNode = scene->GetSelectedNode();
+
     if ((io.MouseDelta.x != 0.f) || (io.MouseDelta.y != 0.f)) {
         const ImVec2& delta = io.MouseDelta;
         const ImVec2& pos = io.MousePos;
         const ImVec2 prevPos{ pos.x - delta.x, pos.y - delta.y };
 
         if (ImGui::IsMouseDragging(ImGuiMouseButton_Right))
-            camera.Orbit(prevPos.x, prevPos.y, pos.x, pos.y, viewport);
-        else if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
-            camera.Pan(prevPos.x, prevPos.y, pos.x, pos.y, viewport);
+            if (io.KeyShift && selectedNode) {
+                const auto& center = selectedNode->GetBoundingBox().Center;
+                auto matrix = Orbit(pos.x, pos.y, prevPos.x, prevPos.y, viewport, camera.LookAt(), dx::XMVectorSet(center.x, center.y, center.z, 1.0f));
+                selectedNode->Transform(matrix);
+            }
+            else {
+                camera.Transform(Orbit(prevPos.x, prevPos.y, pos.x, pos.y, viewport, camera.LookAt(), camera.m_target));
+            }
+        else if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+            if (io.KeyShift && selectedNode) {
+                const auto& center = selectedNode->GetBoundingBox().Center;
+                selectedNode->Transform(Pan(pos.x, pos.y, prevPos.x, prevPos.y, viewport, dx::XMVectorSet(center.x, center.y, center.z, 1.0f)));
+            }
+            else {   
+                camera.Transform(Pan(prevPos.x, prevPos.y, pos.x, pos.y, viewport, camera.m_target));
+            }
+        }
     }
+
+    auto intersected = scene->FindIntersected(camera.CalcCursorRay(io.MousePos.x, io.MousePos.y, viewport));
+
+    if (!intersected.empty() && !io.WantCaptureMouse) {
+        const auto& [dist, closestNode] = *intersected.begin();
+        scene->HighlightNode(closestNode);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_MouseLeft) && !ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+            scene->SelectNode(io.KeyCtrl ? nullptr : closestNode);
+    }
+}
+
+Matrix4x4 Orbit(float prevX, float prevY, float x, float y, const Viewport& vp, const Matrix4x4& lookAt, Point rotationPoint)
+{
+    auto calcVec = [=](float x, float y) {
+        const float xCenter = vp.width / 2.f;
+        const float yCenter = vp.height / 2.f;
+        x = 2 * (x - xCenter) / vp.width * vp.AspectRatio();
+        y = 2 * (y - yCenter) / vp.height;
+
+
+        const float sq = x * x + y * y;
+
+        float z = 0.0f;
+        if (sq < 1.0f)
+            z = sqrtf(1.0f - sq);
+
+        return dx::XMVectorSet(x, -y, z, 0);
+    };
+
+    auto prevVec = calcVec(prevX, prevY);
+    auto nextVec = calcVec(x, y);
+
+    auto vangle = dx::XMVector3AngleBetweenVectors(prevVec, nextVec);
+    float angle{};
+    dx::XMStoreFloat(&angle, vangle);
+
+    auto vreverseLookAt = XMMatrixInverse(nullptr, lookAt);
+    auto vaxis = XMVector3TransformNormal(dx::XMVector3Cross(prevVec, nextVec), vreverseLookAt);
+    auto vquat = dx::XMQuaternionRotationAxis(vaxis, -angle);
+
+    auto T = dx::XMMatrixTranslationFromVector(rotationPoint);
+    auto IT = dx::XMMatrixInverse(nullptr, T);
+
+    return IT * dx::XMMatrixRotationQuaternion(vquat) * T;
+}
+
+Matrix4x4 Pan(float prevX, float prevY, float x, float y, const Viewport& vp, Point pointOnPlane)
+{
+    auto& camera = scene->GetCamera();
+    auto dir = camera.CalcDir();
+
+    auto prevRay = camera.CalcCursorRay(prevX, prevY, vp);
+    auto newRay = camera.CalcCursorRay(x, y, vp);
+    auto targetPlane = dx::XMPlaneFromPointNormal(pointOnPlane, dir);
+    auto prevPos = dx::XMPlaneIntersectLine(targetPlane, prevRay.origin, prevRay.origin + prevRay.dir * (vp.farZ - vp.nearZ));
+    auto newPos = dx::XMPlaneIntersectLine(targetPlane, newRay.origin, newRay.origin + newRay.dir * (vp.farZ - vp.nearZ));
+
+    return dx::XMMatrixTranslationFromVector(prevPos - newPos);
 }
 
 // Helper functions

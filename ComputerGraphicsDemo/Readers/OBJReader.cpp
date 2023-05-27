@@ -72,31 +72,68 @@ void OBJReader::ParseNormal() {
     m_normals.emplace_back(ReadVec<float, 3>(m_fileStr));
 }
 
-void OBJReader::ParseFace() {
+static std::vector<std::string> Triangulate(const std::vector<std::string>& v) {
+    std::vector<std::string> res;
 
-    std::string text;
+    res.push_back(v[0]);
+    res.push_back(v[1]);
+    res.push_back(v[2]);
+
+    res.push_back(v[2]);
+    res.push_back(v[3]);
+    res.push_back(v[0]);
+
+    return res;
+}
+
+static std::vector<std::string> ReadFaceInfoTriangulated(std::istream& istr) {
+    std::string line;
+
+    std::getline(istr, line);
+
+    std::vector<std::string> faceInfo;
+
+    std::stringstream str(line);
+
+    std::string data;
+    while (str >> data)
+        faceInfo.push_back(data);
+
+    if (faceInfo.size() > 3)
+        return Triangulate(faceInfo);
+
+    return faceInfo;
+}
+
+OBJReader::Face OBJReader::ReadFace(std::vector<std::string>::iterator faceBegin, std::vector<std::string>::iterator faceEnd) {
     Face face;
 
-    auto faceInfo = ReadVec<std::string, 3>(m_fileStr);
-
-    constexpr std::string_view indexDelim{ "/" };
-    for (std::size_t i = 0; i < 3; ++i) {
+    for (; faceBegin != faceEnd; ++faceBegin) {
         FaceData fdata{};
-        
+
         std::size_t internalIndex = 0;
-        for (const auto word : std::views::split(faceInfo.data[i], indexDelim)) {
+        for (const auto word : std::views::split(*faceBegin, "/")) {
             int res = 0;
 
             if (!word.empty())
                 res = std::stoi(word.data());
 
-            fdata.data[internalIndex++] = res;
+            fdata[internalIndex++] = res;
         }
 
         face.data.emplace_back(std::move(fdata));
     }
 
-    m_faces.emplace_back(std::move(face));
+    return face;
+}
+
+void OBJReader::ParseFace() {
+    auto faceInfo = ReadFaceInfoTriangulated(m_fileStr);
+
+    for (std::size_t i = 0; i < faceInfo.size(); i += 3) {
+        auto currentIt = faceInfo.begin() + i;
+        m_faces.push_back(ReadFace(currentIt, currentIt + 3));
+    }
 }
 
 void OBJReader::ParseObject()
