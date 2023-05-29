@@ -112,7 +112,8 @@ OBJReader::Face OBJReader::ReadFace(std::vector<std::string>::iterator faceBegin
         FaceData fdata{};
 
         std::size_t internalIndex = 0;
-        for (const auto word : std::views::split(*faceBegin, "/")) {
+        constexpr std::string_view sep{ "/" };
+        for (const auto word : std::views::split(*faceBegin, sep)) {
             int res = 0;
 
             if (!word.empty())

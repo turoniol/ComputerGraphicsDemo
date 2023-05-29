@@ -24,3 +24,5 @@ using DirectX::operator-;
 using DirectX::operator-=;
 
 DirectX::XMFLOAT4X4 GetFloat4x4(Matrix4x4 m);
+
+bool VectorIsUnit(Vector v);

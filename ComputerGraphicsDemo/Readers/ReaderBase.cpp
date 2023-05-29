@@ -2,6 +2,7 @@
 
 
 #include "../Logger.h"
+#include "../Scene.h"
 
 ReaderBase::ReaderBase(const std::string& filepath) 
     : workingDir(std::filesystem::path(filepath).parent_path()),
@@ -15,6 +16,11 @@ void ReaderBase::Read() {
     }
 
     endFunc();
+}
+
+Scene ReaderBase::GetScene() const
+{
+    return Scene();
 }
 
 bool ReaderBase::GetChunk(std::string& chunk) {

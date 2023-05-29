@@ -2,18 +2,18 @@
 
 #include "PropertryWindow.h"
 
-class Scene;
 class MeshNode;
+class Loader;
 
 class ScenePropertyWindow : public PropertyWindow
 {
 public:
-    void SetScene(Scene* scene);
+    void SetLoader(Loader* loader);
     void Render() override;
 
 private:
     void RenderMeshNode(MeshNode* node);
 
-    Scene* m_sceneHandler = nullptr;
+    Loader* m_loader = nullptr;
 };
 

@@ -9,6 +9,8 @@
 
 #include "../TemplateHelper.h"
 
+class Scene;
+
 class ReaderBase
 {
 public:
@@ -19,6 +21,8 @@ public:
 #define IgnorePair(name) actions.insert({ name, [this] { Ignore(); } })
 
 	void Read();
+
+	virtual Scene GetScene() const;
 
 	std::function<void()> endFunc;
 

@@ -36,6 +36,8 @@ public:
     Camera& GetCamera();
 
     std::map<float, MeshNode*> FindIntersected(Ray r) const;
+
+    bool renderBoundingBoxes = false;
 private:
     Light m_light;
     Camera m_camera;

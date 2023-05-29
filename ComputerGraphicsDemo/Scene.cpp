@@ -46,6 +46,11 @@ void Scene::RenderScene(Renderer& renderer, Matrix4x4 projMatrix)
         if (isSelected)
             renderer.RenderBoundingBox(mesh->GetBoundingBox(), { 0.8f, 0.4f, 0.3745f, 1.0f });
 
+        if (renderBoundingBoxes) {
+            renderer.SetMatrices(DirectX::XMMatrixIdentity(), lookAt, projMatrix);
+            renderer.RenderBoundingBox(node->GetBoundingBox(), { 1.0f, 1.0f, 1.0f, 1.0f });
+        }
+
         material = materialBackup;
     };
 
@@ -78,6 +83,9 @@ MeshNode* Scene::GetSelectedNode()
 
 void Scene::HighlightNode(MeshNode* n, Mesh::Material m)
 {
+    if (n == m_selectedNode)
+        return;
+
     m_highlightingMaterials.insert({ n, m });
 }
 
@@ -101,7 +109,7 @@ std::map<float, MeshNode*> Scene::FindIntersected(Ray r) const
     std::map<float, MeshNode*> nodes;
 
     auto f = [&](MeshNode* node) {
-        if (DirectX::XMVector3Equal(r.dir, DirectX::XMVectorSet(0.f, 0.f, 0.f, 0.f)))
+        if (!VectorIsUnit(r.dir))
             return;
 
         if (node->GetMesh() == nullptr)

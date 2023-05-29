@@ -16,19 +16,17 @@
 
 #include <array>
 
-#include "Mesh.h"
 #include "Renderer.h"
-#include "Readers/MOSDReader.h"
-#include "Camera.h"
-#include "Viewport.h"
 #include "Scene.h"
+#include "Viewport.h"
+#include "Loader.h"
 #include "GUI/ScenePropertyWindow.h"
 #include "GUI/MeshNodePropertyWindow.h"
 
 namespace dx = DirectX;
 
 Viewport viewport(1280, 800);
-std::unique_ptr<Scene> scene;
+Loader loader;
 
 // Data stored per platform window
 struct WGL_WindowData { HDC hDC; };
@@ -82,15 +80,13 @@ int main(int, char**)
 
     Renderer renderer;
 
-    MOSDReader reader("C:\\Users\\turon\\Downloads\\fdx54mtvuz28-FinalBaseMesh\\Cube\\cube.mosd");
-    reader.Read();
-    scene = std::make_unique<Scene>(reader.GetScene());
-
-    auto& camera = scene->GetCamera();
+    loader.SetWorkingDir("C:\\Users\\turon\\Downloads\\FinalBaseMesh\\Cube");
 
     ScenePropertyWindow sceneProperty;
     MeshNodePropertyWindow nodeProperty;
-    sceneProperty.SetScene(scene.get());
+    sceneProperty.SetLoader(&loader);
+    loader.index = 1;
+
 
     // Main loop
     bool done = false;
@@ -121,17 +117,20 @@ int main(int, char**)
 
         // Rendering
 
+        loader.Update();
+
         ProcEvents();
 
         sceneProperty.Render();
 
-        auto selectedNode = scene->GetSelectedNode();
+        auto& scene = loader.GetScene();
+        auto selectedNode = scene.GetSelectedNode();
         if (selectedNode) {
             nodeProperty.SetMeshNode(selectedNode);
             nodeProperty.Render();
         }
 
-        scene->RenderScene(renderer, viewport.ProjectionMatrix());
+        scene.RenderScene(renderer, viewport.ProjectionMatrix());
 
         ImGui::Render();
 
@@ -154,10 +153,11 @@ int main(int, char**)
 }
 
 void ProcEvents() {
+    auto& scene = loader.GetScene();
     auto& io = ImGui::GetIO();
     const float cameraDelta = 2.f * io.DeltaTime;
     const float zoomDelta = 0.3f;
-    auto& camera = scene->GetCamera();
+    auto& camera = scene.GetCamera();
 
     if (ImGui::IsKeyDown(ImGuiKey_A))
         camera.Translate(-cameraDelta * camera.CalcRight());
@@ -176,7 +176,7 @@ void ProcEvents() {
     if (io.MouseWheel != 0)
         camera.Zoom(io.MouseWheel * zoomDelta);
 
-    auto selectedNode = scene->GetSelectedNode();
+    auto selectedNode = scene.GetSelectedNode();
 
     if ((io.MouseDelta.x != 0.f) || (io.MouseDelta.y != 0.f)) {
         const ImVec2& delta = io.MouseDelta;
@@ -203,14 +203,14 @@ void ProcEvents() {
         }
     }
 
-    auto intersected = scene->FindIntersected(camera.CalcCursorRay(io.MousePos.x, io.MousePos.y, viewport));
+    auto intersected = scene.FindIntersected(camera.CalcCursorRay(io.MousePos.x, io.MousePos.y, viewport));
 
     if (!intersected.empty() && !io.WantCaptureMouse) {
         const auto& [dist, closestNode] = *intersected.begin();
-        scene->HighlightNode(closestNode);
+        scene.HighlightNode(closestNode);
 
         if (ImGui::IsKeyPressed(ImGuiKey_MouseLeft) && !ImGui::IsMouseDragging(ImGuiMouseButton_Left))
-            scene->SelectNode(io.KeyCtrl ? nullptr : closestNode);
+            scene.SelectNode(io.KeyCtrl ? nullptr : closestNode);
     }
 }
 
@@ -251,7 +251,7 @@ Matrix4x4 Orbit(float prevX, float prevY, float x, float y, const Viewport& vp, 
 
 Matrix4x4 Pan(float prevX, float prevY, float x, float y, const Viewport& vp, Point pointOnPlane)
 {
-    auto& camera = scene->GetCamera();
+    auto& camera = loader.GetScene().GetCamera();
     auto dir = camera.CalcDir();
 
     auto prevRay = camera.CalcCursorRay(prevX, prevY, vp);

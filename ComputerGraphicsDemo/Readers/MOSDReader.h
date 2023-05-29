@@ -18,7 +18,7 @@ class MOSDReader : public ReaderBase
 public:
     MOSDReader(const std::string& file);
 
-    Scene GetScene() const;
+    Scene GetScene() const override;
 
 private:
     friend struct MOSDScene;
