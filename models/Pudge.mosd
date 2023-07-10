@@ -1,0 +1,35 @@
+scene Scene 
+    usecamera Camera 
+    uselight Light 
+    node Root
+    end
+end 
+
+node Root 
+    usematrix I
+    usegeom Cube
+end
+
+light Light 
+    position 100 100 100
+    color 0.27 0.27 0.27
+end 
+
+camera Camera 
+    eye 0 10 20
+    target 0 10 0
+    up 0 1 0
+end
+
+geometry Cube
+    source Pudge.obj
+    object Pudge_Body_Mesh
+end
+
+# matrices #
+matrix I
+    data 0.1 0 0 0
+         0 0.1 0 0
+         0 0 0.1 0
+         0 0 0 1
+end 

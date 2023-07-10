@@ -1,0 +1,57 @@
+# scene #
+scene MainScene
+    usecamera Camera
+    uselight Light
+
+    node Root
+        node N1 
+            node N1 
+            end 
+        end
+    end 
+end
+
+# nodes #
+node Root 
+    usematrix I
+    usegeom Cube
+end
+
+node N1
+    usematrix M1
+    usegeom Cube
+end
+
+# camera #
+camera Camera
+    eye 0 0 8
+    target 0 0 0
+    up 0 1 0
+end
+
+# light #
+light Light 
+    color 1 1 1
+    position 100 160 100
+end 
+
+# geometry #
+geometry Cube
+    source cube.obj
+    object Cube
+end
+
+# matrices #
+matrix I
+    data 1 0 0 0
+         0 1 0 0
+         0 0 1 0
+         0 0 0 1
+end 
+
+matrix M1
+    data 1 0 0 0
+         0 1 0 0
+         0 0 1 0
+         1 2 0 1
+end
