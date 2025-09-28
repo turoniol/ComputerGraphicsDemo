@@ -1,22 +1,26 @@
 version: 2.1
 
-orbs:
-  kube: circleci/kubernetes@0.10.0
-
 jobs:
-  test-deploy:
+  deploy:
     docker:
       - image: cimg/base:stable
     steps:
-      - checkout
-      - kube/install
       - run:
-          name: Deploy to Kubernetes
+          name: Deploying
           command: |
-            kubectl apply -f k8s/deployment.yaml
+            circleci run release update k8s-eastus --status=running
+  cancel-deploy:
+    docker:
+      - image: cimg/go:stable
+    steps:
+      - run:
+          name: Update planned release to CANCELED
+          command: |
+            circleci run release update --status=SUCCESS
 
 workflows:
   version: 2
-  test-deployment:
+  deploy-workflow:
     jobs:
-      - test-deploy
+      - deploy
+      - cancel-deploy
