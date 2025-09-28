@@ -7,7 +7,8 @@ jobs:
     steps:
       - run:
           name: Plan a deploy
-          command: circleci run release plan k8s-main-app \
+          command: |
+            circleci run release plan k8s-main-app \
               --environment-name=development \
               --component-name=k8s-main-app-ui \
               --target-version=0.0.1 \
